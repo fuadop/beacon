@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"yourproject/internal/database/models"
+	"github.com/fuadop/beacon/internal/database/models"
 )
 
 func Insert[T models.TableRepresenter](db *sql.DB, item *T) error {
@@ -138,10 +138,6 @@ func Count[T models.TableRepresenter](db *sql.DB) (int, error) {
 func GetAll[T models.TableRepresenter](db *sql.DB) ([]T, error) {
 	var model T
 	tableName := model.TableName()
-
-	// Reflect structure values to dynamically prepare scan destinations
-	val := reflect.ValueOf(&model).Elem()
-	typ := val.Type()
 
 	query := fmt.Sprintf("SELECT * FROM %s", tableName)
 	rows, err := db.Query(query)

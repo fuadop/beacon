@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"yourproject/internal/database/models"
+	"github.com/fuadop/beacon/internal/database/models"
 )
 
 func Create[T models.TableRepresenter](db *sql.DB) error {
