@@ -1,4 +1,3 @@
-// internal/database/database.go
 package database
 
 import (
@@ -30,15 +29,12 @@ func InitAndSeedDB() (*sql.DB, error) {
 	// 2. Structural table creation via DDL
 	if err := ddl.Create[models.Schedule](db); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("failed to process DDL for Schema model: %w", err)
+		return nil, fmt.Errorf("failed to process DDL for Schedule model: %w", err)
 	}
 
-	// 3. MULTIPLE SEEDS ZONE
-	var count int
-	var sample models.Schedule
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", sample.TableName())
-
-	if err := db.QueryRow(countQuery).Scan(&count); err != nil {
+	// 3. MULTIPLE SEEDS ZONE (Cleaner using generic Count)
+	count, err := dml.Count[models.Schedule](db)
+	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to verify table row integrity: %w", err)
 	}
@@ -52,8 +48,6 @@ func InitAndSeedDB() (*sql.DB, error) {
 
 		// Loop over the dataset dynamically
 		for _, seedRecord := range seeds {
-			// We pass a pointer (&seedRecord) to our generic Insert function.
-			// This will execute the SQL and automatically update seedRecord.ID with its SQLite primary key.
 			if err := dml.Insert(db, &seedRecord); err != nil {
 				db.Close()
 				return nil, fmt.Errorf("failed execution on dynamic seeder payload item: %w", err)
@@ -62,6 +56,7 @@ func InitAndSeedDB() (*sql.DB, error) {
 		}
 		fmt.Printf("✔ Seeding complete. Successfully injected %d rows.\n", len(seeds))
 	} else {
+		var sample models.Schedule
 		fmt.Printf("ℹ Table '%s' already contains %d rows. Seeding skipped.\n", sample.TableName(), count)
 	}
 

@@ -120,3 +120,57 @@ func Wipe[T models.TableRepresenter](db *sql.DB) error {
 	_, err := db.Exec(query)
 	return err
 }
+
+// Count generic utility returns the total number of entries sitting inside the model's table
+func Count[T models.TableRepresenter](db *sql.DB) (int, error) {
+	var model T
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", model.TableName())
+
+	var count int
+	err := db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// GetAll pulls all existing records out of a target model table dynamically
+func GetAll[T models.TableRepresenter](db *sql.DB) ([]T, error) {
+	var model T
+	tableName := model.TableName()
+
+	// Reflect structure values to dynamically prepare scan destinations
+	val := reflect.ValueOf(&model).Elem()
+	typ := val.Type()
+
+	query := fmt.Sprintf("SELECT * FROM %s", tableName)
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []T
+
+	for rows.Next() {
+		// Initialize a completely new element instance instance for each row iteration
+		var item T
+		itemVal := reflect.ValueOf(&item).Elem()
+
+		var scanTargets []any
+		for i := 0; i < itemVal.NumField(); i++ {
+			scanTargets = append(scanTargets, itemVal.Field(i).Addr().Interface())
+		}
+
+		if err := rows.Scan(scanTargets...); err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
